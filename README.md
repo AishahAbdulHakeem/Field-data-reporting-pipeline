@@ -1,54 +1,56 @@
-# Field Data Reporting Pipeline
+# Field Data Cleaner
 
-A Streamlit-based data cleaning and reporting app that turns raw field data files into standardized, downloadable Excel outputs.
+A Streamlit-based data cleaning app that turns one raw CSV or Excel file into a standardized, downloadable Excel output.
 
-This project is a public, sanitized portfolio version of an operational data automation workflow. It focuses on one clean user flow:
+This project is a public, sanitized portfolio version of an operational data cleaning workflow. It focuses on a simple, recruiter-friendly user flow:
 
 ```text
-Upload ZIP/files → clean and standardize data → preview cleaned tables → download Excel workbook
+Upload one CSV/XLSX file → standardize column names → remove empty rows → flag empty cells → download cleaned Excel file
 ```
 
 ## What This Project Demonstrates
 
 - Python data cleaning with pandas
 - Streamlit file-upload workflow
-- Automated Excel workbook generation
-- File type detection for CSV and Excel files
-- Column standardization and metadata enrichment
+- Automated Excel file generation
+- Column-name standardization for messy datasets
+- Empty-row removal
+- Empty-cell flagging for data quality review
 - Cleaned data previews inside the app
 - Downloadable reporting outputs for non-technical users
 
 ## Data Workflow
 
 ```text
-Raw uploaded ZIP
+Raw uploaded file
         ↓
-Extract CSV / Excel files
+Read CSV or Excel file
         ↓
-Detect workflow from file names
+Standardize column names
         ↓
-Read and standardize each file
+Remove completely empty rows
         ↓
-Add farm and visit metadata
+Flag rows with empty cells
         ↓
 Preview cleaned data in Streamlit
         ↓
-Generate downloadable Excel workbook
+Download cleaned Excel file
 ```
 
 ## App Features
 
-- Upload a ZIP containing raw CSV or Excel files
-- Automatically extract and process supported files
-- Standardize column names into readable labels
-- Add farm name and visit date metadata
-- Categorize files into reporting workflows based on file names
+- Upload one `.csv`, `.xlsx`, or `.xls` file
+- Standardize column names into clean Title Case
+- Remove rows that are completely empty
+- Add a `Has Empty Cells` flag
+- Add an `Empty Cell Count` field
+- Add an `Empty Columns` field listing which columns are missing values
 - Preview cleaned records before download
-- Export all cleaned sheets into one Excel workbook
+- Export the cleaned result as an Excel file
 
 ## Privacy Note
 
-This repository is sanitized for public portfolio use. Real client data, farm names, credentials, upload archives, generated reports, private logos, and internal configuration files were removed or replaced with sample placeholders.
+This repository is sanitized for public portfolio use. Real client data, credentials, upload archives, generated reports, private logos, and internal configuration files were removed or replaced with sample placeholders.
 
 ## Project Structure
 
@@ -56,7 +58,6 @@ This repository is sanitized for public portfolio use. Real client data, farm na
 ├── main.py                 # Streamlit app entry point
 ├── utils.py                # Shared cleaning and Excel helpers
 ├── file_reader.py          # General file reading helper
-├── sample_data/            # Synthetic sample files for testing
 ├── .gitignore              # Prevents secrets, outputs, and local files from being committed
 └── requirements.txt        # Python dependencies
 ```
@@ -72,26 +73,22 @@ streamlit run main.py
 
 ## How to Use
 
-1. Create a ZIP file containing CSV or Excel files.
-2. Name the ZIP using this pattern if you want farm/date metadata parsed automatically:
-
-```text
-Demo_Farm_20250601.zip
-```
-
-3. Upload the ZIP in the Streamlit app.
-4. Review cleaned data previews.
-5. Download the cleaned Excel workbook.
+1. Upload one CSV or Excel file.
+2. Review the cleaning summary metrics.
+3. Preview the cleaned data table.
+4. Expand flagged rows to review missing cells.
+5. Download the cleaned Excel file.
 
 ## Recruiter Summary
 
-This project shows my ability to turn messy operational data workflows into repeatable automation systems. It reflects experience with file ingestion, data cleaning, metadata enrichment, report generation, and user-facing Streamlit tools for non-technical users.
+This project shows my ability to turn messy operational data into clean, reviewable outputs through a simple automation interface. It reflects experience with file ingestion, data standardization, data quality flagging, Excel output generation, and user-facing Streamlit tools.
 
 ## Future Improvements
 
-- Add stronger validation rules for each workflow type
-- Add a generated data quality summary sheet
-- Add downloadable error logs for skipped files
-- Add sample ZIP files for demo testing
+- Add duplicate-row detection
+- Add type validation for date and numeric columns
+- Add downloadable data quality summary reports
+- Add optional CSV export
+- Add sample files for demo testing
 - Deploy the app on Streamlit Cloud
 - Add unit tests for core cleaning functions
