@@ -1,0 +1,8 @@
+ cow_id ,MILK-GROUP,hygiene_score, visit_date ,notes/comments
+101,Group 1,2,2025-06-01,normal
+102,Group 1,,2025-06-01,missing score
+103,,3,2025-06-01,missing group
+,,,,
+104,Group 2,1,,missing visit date
+105,Group 2,4,2025-06-01,
+106,Group 3,2,2025-06-01,needs follow up
