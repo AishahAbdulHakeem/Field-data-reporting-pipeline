@@ -4,7 +4,7 @@ from io import BytesIO
 
 import pandas as pd
 
-FLAG_COLUMNS = ["Has Empty Cells", "Empty Cell Count", "Empty Columns"]
+FLAG_COLUMNS = ["Has Empty Cells", "Empty Cell Count", "Empty Columns", "Is Duplicate Row"]
 
 
 def standardize_column_name(column_name) -> str:
@@ -54,6 +54,14 @@ def flag_empty_cells(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def flag_duplicate_rows(df: pd.DataFrame) -> pd.DataFrame:
+    """Add a duplicate-row flag based on the original cleaned data columns."""
+    df = df.copy()
+    data_columns = [col for col in df.columns if col not in FLAG_COLUMNS]
+    df["Is Duplicate Row"] = df.duplicated(subset=data_columns, keep=False)
+    return df
+
+
 def remove_flag_columns(df: pd.DataFrame) -> pd.DataFrame:
     """Return cleaned data without internal review/flag columns."""
     return df.drop(columns=[col for col in FLAG_COLUMNS if col in df.columns])
@@ -70,6 +78,7 @@ def clean_uploaded_table(uploaded_file) -> tuple[pd.DataFrame, dict]:
 
     cleaned_df = standardize_columns(cleaned_df)
     cleaned_df = flag_empty_cells(cleaned_df)
+    cleaned_df = flag_duplicate_rows(cleaned_df)
 
     summary = {
         "original_rows": original_rows,
@@ -79,6 +88,7 @@ def clean_uploaded_table(uploaded_file) -> tuple[pd.DataFrame, dict]:
         "final_columns": len(remove_flag_columns(cleaned_df).columns),
         "rows_with_empty_cells": int(cleaned_df["Has Empty Cells"].sum()) if not cleaned_df.empty else 0,
         "total_empty_cells": int(cleaned_df["Empty Cell Count"].sum()) if not cleaned_df.empty else 0,
+        "duplicate_rows": int(cleaned_df["Is Duplicate Row"].sum()) if not cleaned_df.empty else 0,
     }
 
     return cleaned_df, summary
@@ -94,6 +104,7 @@ def build_data_quality_summary(summary: dict) -> pd.DataFrame:
         "final_columns": "Final Columns",
         "rows_with_empty_cells": "Rows With Empty Cells",
         "total_empty_cells": "Total Empty Cells",
+        "duplicate_rows": "Duplicate Rows Flagged",
     }
 
     return pd.DataFrame(
