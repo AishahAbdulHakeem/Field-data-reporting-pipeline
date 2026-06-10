@@ -4,6 +4,8 @@ from io import BytesIO
 
 import pandas as pd
 
+FLAG_COLUMNS = ["Has Empty Cells", "Empty Cell Count", "Empty Columns"]
+
 
 def standardize_column_name(column_name) -> str:
     """Convert any column name into clean Title Case."""
@@ -52,6 +54,11 @@ def flag_empty_cells(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def remove_flag_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Return cleaned data without internal review/flag columns."""
+    return df.drop(columns=[col for col in FLAG_COLUMNS if col in df.columns])
+
+
 def clean_uploaded_table(uploaded_file) -> tuple[pd.DataFrame, dict]:
     """Run the simplified public cleaning workflow."""
     raw_df = read_uploaded_file(uploaded_file)
@@ -69,7 +76,7 @@ def clean_uploaded_table(uploaded_file) -> tuple[pd.DataFrame, dict]:
         "cleaned_rows": len(cleaned_df),
         "removed_empty_rows": removed_empty_rows,
         "original_columns": original_columns,
-        "final_columns": len(cleaned_df.columns),
+        "final_columns": len(remove_flag_columns(cleaned_df).columns),
         "rows_with_empty_cells": int(cleaned_df["Has Empty Cells"].sum()) if not cleaned_df.empty else 0,
         "total_empty_cells": int(cleaned_df["Empty Cell Count"].sum()) if not cleaned_df.empty else 0,
     }
@@ -77,9 +84,14 @@ def clean_uploaded_table(uploaded_file) -> tuple[pd.DataFrame, dict]:
     return cleaned_df, summary
 
 
-def dataframe_to_excel_bytes(df: pd.DataFrame) -> bytes:
-    """Convert dataframe to downloadable Excel bytes."""
+def dataframe_to_excel_bytes(df: pd.DataFrame, include_flags: bool = False) -> bytes:
+    """Convert dataframe to downloadable Excel bytes.
+
+    By default, review-only flag columns are removed from the exported file.
+    """
+    export_df = df.copy() if include_flags else remove_flag_columns(df)
+
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        df.to_excel(writer, sheet_name="Cleaned Data", index=False)
+        export_df.to_excel(writer, sheet_name="Cleaned Data", index=False)
     return output.getvalue()
