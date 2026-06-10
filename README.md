@@ -78,6 +78,16 @@ Download cleaned Excel file
 - Preview cleaned records before download
 - Export the cleaned result as an Excel file
 
+## Demo File
+
+A sample messy CSV file is included for testing:
+
+```text
+sample_data/test_messy_field_data.csv
+```
+
+The sample file includes messy column names, blank cells, and a completely empty row so users can test the cleaner quickly.
+
 ## Privacy Note
 
 This repository is sanitized for public portfolio use. Real client data, credentials, upload archives, generated reports, private logos, organization-specific details, and internal configuration files were removed or replaced with sample placeholders.
@@ -87,7 +97,7 @@ This repository is sanitized for public portfolio use. Real client data, credent
 ```text
 ├── main.py                 # Streamlit app entry point
 ├── utils.py                # Shared cleaning and Excel helpers
-├── file_reader.py          # General file reading helper
+├── sample_data/            # Public sample data for testing
 ├── .gitignore              # Prevents secrets, outputs, and local files from being committed
 └── requirements.txt        # Python dependencies
 ```
@@ -121,6 +131,5 @@ The public version is intentionally smaller than the full internship workflow, b
 - Add type validation for date and numeric columns
 - Add downloadable data quality summary reports
 - Add optional CSV export
-- Add sample files for demo testing
 - Deploy the app on Streamlit Cloud
 - Add unit tests for core cleaning functions
