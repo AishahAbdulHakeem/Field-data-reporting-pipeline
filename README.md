@@ -9,7 +9,7 @@ Try the app here: https://field-data-reporting-pipeline.streamlit.app/
 This project is a public, sanitized portfolio version of a larger operational data automation workflow I worked on during my internship. It focuses on a simple, recruiter-friendly user flow:
 
 ```text
-Upload one CSV/XLSX file → standardize column names → remove empty rows → flag empty cells → download cleaned Excel file
+Upload one CSV/XLSX file → standardize column names → remove empty rows → flag empty cells and duplicate rows → download cleaned Excel file with a data quality summary
 ```
 
 ## Internship Connection
@@ -24,10 +24,11 @@ This public project reflects the core idea of that work: converting messy operat
 - Standardize column names into clean Title Case
 - Remove rows that are completely empty
 - Flag rows that contain missing values
+- Flag duplicate rows
 - Add an `Empty Cell Count` field
 - Add an `Empty Columns` field listing which columns are missing values
 - Preview cleaned records inside Streamlit
-- Export the cleaned result as an Excel file
+- Export the cleaned result as an Excel file with a `Data Quality Summary` sheet
 
 ## How This Differs From the Internship Workflow
 
@@ -42,6 +43,17 @@ This version is intentionally simplified and sanitized for public portfolio use.
 | Included organization-specific context | Removes private names, credentials, logos, and internal details |
 | Supported broader reporting automation | Demonstrates the core cleaning and quality-flagging logic |
 
+## Tech Stack
+
+| Area | Tools |
+|---|---|
+| Language | Python |
+| App Framework | Streamlit |
+| Data Cleaning | pandas |
+| Excel Export | openpyxl |
+| Deployment | Streamlit Community Cloud |
+| Version Control | GitHub |
+
 ## What This Project Demonstrates
 
 - Python data cleaning with pandas
@@ -50,6 +62,7 @@ This version is intentionally simplified and sanitized for public portfolio use.
 - Column-name standardization for messy datasets
 - Empty-row removal
 - Empty-cell flagging for data quality review
+- Duplicate-row detection
 - Cleaned data previews inside the app
 - Downloadable reporting outputs for non-technical users
 
@@ -64,11 +77,11 @@ Standardize column names
         ↓
 Remove completely empty rows
         ↓
-Flag rows with empty cells
+Flag rows with empty cells and duplicate records
         ↓
 Preview cleaned data in Streamlit
         ↓
-Download cleaned Excel file
+Download cleaned Excel file + data quality summary
 ```
 
 ## App Features
@@ -79,8 +92,9 @@ Download cleaned Excel file
 - Add a `Has Empty Cells` flag
 - Add an `Empty Cell Count` field
 - Add an `Empty Columns` field listing which columns are missing values
+- Add an `Is Duplicate Row` flag
 - Preview cleaned records before download
-- Export the cleaned result as an Excel file
+- Export the cleaned result as an Excel file with two sheets: `Cleaned Data` and `Data Quality Summary`
 
 ## Demo File
 
@@ -120,19 +134,17 @@ streamlit run main.py
 1. Upload one CSV or Excel file.
 2. Review the cleaning summary metrics.
 3. Preview the cleaned data table.
-4. Expand flagged rows to review missing cells.
+4. Expand flagged rows to review missing cells or duplicate records.
 5. Download the cleaned Excel file.
 
 ## Recruiter Summary
 
-This project shows my ability to turn messy operational data into clean, reviewable outputs through a simple automation interface. It reflects experience with file ingestion, data standardization, data quality flagging, Excel output generation, and user-facing Streamlit tools.
+This project shows my ability to turn messy operational data into clean, reviewable outputs through a simple automation interface. It reflects experience with file ingestion, data standardization, data quality flagging, duplicate detection, Excel output generation, and user-facing Streamlit tools.
 
 The public version is intentionally smaller than the full internship workflow, but it demonstrates the same core automation pattern: reduce manual spreadsheet work, improve data consistency, and create outputs that non-technical users can act on.
 
 ## Future Improvements
 
-- Add duplicate-row detection
 - Add type validation for date and numeric columns
-- Add downloadable data quality summary reports
 - Add optional CSV export
 - Add unit tests for core cleaning functions
