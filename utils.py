@@ -84,14 +84,37 @@ def clean_uploaded_table(uploaded_file) -> tuple[pd.DataFrame, dict]:
     return cleaned_df, summary
 
 
-def dataframe_to_excel_bytes(df: pd.DataFrame, include_flags: bool = False) -> bytes:
+def build_data_quality_summary(summary: dict) -> pd.DataFrame:
+    """Create a clean summary table for the Excel export."""
+    labels = {
+        "original_rows": "Original Rows",
+        "cleaned_rows": "Rows After Cleaning",
+        "removed_empty_rows": "Empty Rows Removed",
+        "original_columns": "Original Columns",
+        "final_columns": "Final Columns",
+        "rows_with_empty_cells": "Rows With Empty Cells",
+        "total_empty_cells": "Total Empty Cells",
+    }
+
+    return pd.DataFrame(
+        [{"Metric": labels[key], "Value": value} for key, value in summary.items() if key in labels]
+    )
+
+
+def dataframe_to_excel_bytes(df: pd.DataFrame, summary: dict | None = None, include_flags: bool = False) -> bytes:
     """Convert dataframe to downloadable Excel bytes.
 
-    By default, review-only flag columns are removed from the exported file.
+    By default, review-only flag columns are removed from the Cleaned Data sheet.
+    If a summary dictionary is provided, a Data Quality Summary sheet is added.
     """
     export_df = df.copy() if include_flags else remove_flag_columns(df)
 
     output = BytesIO()
     with pd.ExcelWriter(output, engine="openpyxl") as writer:
         export_df.to_excel(writer, sheet_name="Cleaned Data", index=False)
+
+        if summary is not None:
+            summary_df = build_data_quality_summary(summary)
+            summary_df.to_excel(writer, sheet_name="Data Quality Summary", index=False)
+
     return output.getvalue()
