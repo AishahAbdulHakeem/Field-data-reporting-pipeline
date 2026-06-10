@@ -8,7 +8,7 @@ st.set_page_config(page_title="Field Data Cleaner", page_icon="🧼", layout="wi
 st.title("🧼 Field Data Cleaner")
 st.write(
     "Upload one CSV or Excel file. The app standardizes column names, removes completely empty rows, "
-    "flags empty cells, previews the cleaned data, and exports a cleaned Excel file."
+    "flags empty cells, previews the cleaned data, and exports a cleaned Excel file with a data quality summary."
 )
 
 uploaded_file = st.file_uploader("Upload one CSV or Excel file", type=["csv", "xlsx", "xls"])
@@ -35,7 +35,7 @@ if uploaded_file:
         else:
             st.info("No empty cells were found after removing fully empty rows.")
 
-        output_bytes = dataframe_to_excel_bytes(cleaned_df)
+        output_bytes = dataframe_to_excel_bytes(cleaned_df, summary=summary)
         output_name = uploaded_file.name.rsplit(".", 1)[0] + "_cleaned.xlsx"
 
         st.download_button(
