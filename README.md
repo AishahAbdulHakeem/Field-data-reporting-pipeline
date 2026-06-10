@@ -1,31 +1,50 @@
 # Field Data Reporting Pipeline
 
-A public, sanitized version of a data cleaning and reporting workflow inspired by internship work. This project demonstrates how raw field data can be uploaded, cleaned, standardized, validated, and converted into dashboard-ready outputs and Excel summaries.
+A Streamlit-based data cleaning and reporting app that turns raw field data files into standardized, downloadable Excel outputs.
+
+This project is a public, sanitized portfolio version of an operational data automation workflow. It focuses on one clean user flow:
+
+```text
+Upload ZIP/files → clean and standardize data → preview cleaned tables → download Excel workbook
+```
 
 ## What This Project Demonstrates
 
-- Python data cleaning with pandas and NumPy
-- Streamlit-based workflow interface
-- Automated Excel report generation
-- Modular cleaning scripts for multiple field-data workflows
-- Safe configuration patterns using environment variables
-- Optional Airtable integration using placeholder credentials
+- Python data cleaning with pandas
+- Streamlit file-upload workflow
+- Automated Excel workbook generation
+- File type detection for CSV and Excel files
+- Column standardization and metadata enrichment
+- Cleaned data previews inside the app
+- Downloadable reporting outputs for non-technical users
 
 ## Data Workflow
 
 ```text
-Raw uploaded files
+Raw uploaded ZIP
         ↓
-File type detection
+Extract CSV / Excel files
         ↓
-Cleaning and standardization
+Detect workflow from file names
         ↓
-Validation and summary metrics
+Read and standardize each file
         ↓
-Cleaned Excel/CSV outputs
+Add farm and visit metadata
         ↓
-Dashboard-ready reporting data
+Preview cleaned data in Streamlit
+        ↓
+Generate downloadable Excel workbook
 ```
+
+## App Features
+
+- Upload a ZIP containing raw CSV or Excel files
+- Automatically extract and process supported files
+- Standardize column names into readable labels
+- Add farm name and visit date metadata
+- Categorize files into reporting workflows based on file names
+- Preview cleaned records before download
+- Export all cleaned sheets into one Excel workbook
 
 ## Privacy Note
 
@@ -35,17 +54,11 @@ This repository is sanitized for public portfolio use. Real client data, farm na
 
 ```text
 ├── main.py                 # Streamlit app entry point
-├── pipeline.py             # Core pipeline orchestration
-├── file_reader.py          # File reading and upload helpers
-├── udder_hygiene.py        # Udder hygiene cleaning workflow
-├── teat_hygiene.py         # Teat hygiene cleaning workflow
-├── teat.py                 # Teat scoring transformation logic
-├── stall_eval.py           # Stall evaluation cleaning workflow
-├── stripyields.py          # Strip yield workflow
-├── airtable_push.py        # Optional Airtable integration with placeholders
-├── sample_data/            # Synthetic sample input data
-├── .env.example            # Safe example config
-└── requirements.txt
+├── utils.py                # Shared cleaning and Excel helpers
+├── file_reader.py          # General file reading helper
+├── sample_data/            # Synthetic sample files for testing
+├── .gitignore              # Prevents secrets, outputs, and local files from being committed
+└── requirements.txt        # Python dependencies
 ```
 
 ## Setup
@@ -57,10 +70,28 @@ pip install -r requirements.txt
 streamlit run main.py
 ```
 
-## Configuration
+## How to Use
 
-Copy `.env.example` to `.env` and add your own credentials only if you plan to test external integrations. Never commit `.env` or `secrets.toml`.
+1. Create a ZIP file containing CSV or Excel files.
+2. Name the ZIP using this pattern if you want farm/date metadata parsed automatically:
+
+```text
+Demo_Farm_20250601.zip
+```
+
+3. Upload the ZIP in the Streamlit app.
+4. Review cleaned data previews.
+5. Download the cleaned Excel workbook.
 
 ## Recruiter Summary
 
-This project shows my ability to turn messy operational data workflows into repeatable automation systems. It reflects experience with file ingestion, data cleaning, report generation, dashboard-ready outputs, and integration patterns for operational reporting.
+This project shows my ability to turn messy operational data workflows into repeatable automation systems. It reflects experience with file ingestion, data cleaning, metadata enrichment, report generation, and user-facing Streamlit tools for non-technical users.
+
+## Future Improvements
+
+- Add stronger validation rules for each workflow type
+- Add a generated data quality summary sheet
+- Add downloadable error logs for skipped files
+- Add sample ZIP files for demo testing
+- Deploy the app on Streamlit Cloud
+- Add unit tests for core cleaning functions
