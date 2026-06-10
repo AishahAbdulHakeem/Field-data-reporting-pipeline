@@ -1,161 +1,125 @@
-# main.py
+import os
+import re
+import tempfile
+import zipfile
+from pathlib import Path
 
-import streamlit as st
-import os, tempfile, zipfile, re
 import pandas as pd
-from openpyxl import Workbook
+import streamlit as st
 
-import teat
-import udder_hygiene
-import teat_hygiene as tt
-import stall_eval
-import stripyields
-
-from airtable_push import (
-    AirtableClient,
-    prepare_udder_rows,
-    prepare_teat_rows,
-    prepare_teat_scoring_rows,
-    prepare_stall_eval_rows,
-    prepare_strip_yields_rows,
-)
-
-# -----------------------------
-# Config
-# -----------------------------
+from utils import clean_basic, write_sheet
 
 BASE_CLEAN_DIR = "Cleaned"
 os.makedirs(BASE_CLEAN_DIR, exist_ok=True)
 
 
-# Optional Airtable integration is disabled in the public version.
-at = None
-VISITS_TABLE = "Visits"
-FARMS_TABLE = "Farms"
-VISIT_PROGRAM = "DEMO"
-
-# -----------------------------
-# Helpers
-# -----------------------------
-
 def parse_zip_name(zip_filename: str):
-    """
-    Expect: Farm_Name_YYYYMMDD.zip
-    """
-    stem = os.path.splitext(zip_filename)[0]
-    m = re.match(r"^(?P<farm>.+)_(?P<yyyy>\d{4})(?P<mm>\d{2})(?P<dd>\d{2})$", stem)
-    if not m:
-        return None, None
+    """Parse ZIP names like Farm_Name_YYYYMMDD.zip into farm name and visit date."""
+    stem = Path(zip_filename).stem
+    match = re.match(r"^(?P<farm>.+)_(?P<yyyy>\d{4})(?P<mm>\d{2})(?P<dd>\d{2})$", stem)
+    if not match:
+        return "Demo Farm", pd.Timestamp.today().strftime("%Y-%m-%d")
 
-    farm = m.group("farm").replace("_", " ").title()
-    date = pd.to_datetime(
-        f"{m.group('yyyy')}-{m.group('mm')}-{m.group('dd')}",
-        errors="coerce",
-    )
-    return farm, date.strftime("%Y-%m-%d") if not pd.isna(date) else None
+    farm_name = match.group("farm").replace("_", " ").title()
+    visit_date = f"{match.group('yyyy')}-{match.group('mm')}-{match.group('dd')}"
+    return farm_name, visit_date
 
 
-def fill_visit_date_if_missing(df, visit_date):
-    if "Visit Date" not in df.columns:
-        df["Visit Date"] = visit_date
-    else:
-        mask = df["Visit Date"].isna() | (df["Visit Date"].astype(str).str.strip() == "")
-        df.loc[mask, "Visit Date"] = visit_date
-    return df
+def detect_workflow(file_name: str) -> str:
+    """Detect workflow type from a file name."""
+    name = file_name.lower()
+    if "udder" in name:
+        return "Udder Hygiene"
+    if "teat" in name and "scor" in name:
+        return "Teat Scoring"
+    if "teat" in name:
+        return "Teat Hygiene"
+    if "stall" in name:
+        return "Stall Evaluation"
+    if "strip" in name or "yield" in name:
+        return "Strip Yields"
+    return "General Cleaned Data"
 
 
-# -----------------------------
-# App
-# -----------------------------
+def clean_uploaded_file(file_path: str, farm_name: str, visit_date: str):
+    """Clean a file and return workflow name plus cleaned dataframe."""
+    workflow = detect_workflow(Path(file_path).name)
+    df = clean_basic(file_path, farm_name, visit_date)
+    df["Source File"] = Path(file_path).name
+    df["Workflow"] = workflow
+    return workflow, df
 
-st.title("🧼 Demo Dairy Data Cleaner")
 
-uploaded_zip = st.file_uploader("Upload Farm ZIP", type="zip")
+def process_zip(uploaded_zip) -> tuple[str, list[tuple[str, pd.DataFrame]], list[str]]:
+    farm_name, visit_date = parse_zip_name(uploaded_zip.name)
+    safe_visit = visit_date.replace("-", "_")
+    output_workbook = os.path.join(BASE_CLEAN_DIR, f"{farm_name} {safe_visit} Cleaned Summary.xlsx")
+    processed = []
+    errors = []
+
+    with tempfile.TemporaryDirectory() as tmp:
+        zip_path = os.path.join(tmp, uploaded_zip.name)
+        with open(zip_path, "wb") as f:
+            f.write(uploaded_zip.read())
+
+        with zipfile.ZipFile(zip_path) as z:
+            z.extractall(tmp)
+
+        files = [
+            os.path.join(root, file_name)
+            for root, _, file_names in os.walk(tmp)
+            for file_name in file_names
+            if file_name.lower().endswith((".csv", ".xlsx", ".xls"))
+        ]
+
+        if not files:
+            errors.append("No CSV or Excel files were found in the uploaded ZIP.")
+            return output_workbook, processed, errors
+
+        for file_path in files:
+            try:
+                workflow, df = clean_uploaded_file(file_path, farm_name, visit_date)
+                sheet_name = workflow
+                write_sheet(df, output_workbook, sheet_name)
+                processed.append((workflow, df))
+            except Exception as exc:
+                errors.append(f"Could not process {Path(file_path).name}: {exc}")
+
+    return output_workbook, processed, errors
+
+
+st.set_page_config(page_title="Field Data Reporting Pipeline", page_icon="🧼", layout="wide")
+
+st.title("🧼 Field Data Reporting Pipeline")
+st.write(
+    "Upload a ZIP of raw CSV or Excel files. The app cleans the files, adds visit metadata, "
+    "standardizes columns, previews the cleaned data, and generates a downloadable Excel workbook."
+)
+
+uploaded_zip = st.file_uploader("Upload a ZIP file", type="zip")
 
 if uploaded_zip:
-    farm, visit_date = parse_zip_name(uploaded_zip.name)
+    with st.spinner("Cleaning uploaded files..."):
+        output_workbook, processed, errors = process_zip(uploaded_zip)
 
-    if not farm or not visit_date:
-        st.error("ZIP must be named: Farm_Name_YYYYMMDD.zip")
-        st.stop()
+    if errors:
+        st.warning("Some files could not be processed.")
+        for error in errors:
+            st.write(f"- {error}")
 
-    safe_visit = visit_date.replace("-", "_")
-    output_workbook = os.path.join(BASE_CLEAN_DIR, f"{farm} {safe_visit} Summary.xlsx")
+    if processed:
+        st.success(f"Processed {len(processed)} file(s).")
 
-    if not os.path.exists(output_workbook):
-        wb = Workbook()
-        wb.active.title = "Init"
-        wb.save(output_workbook)
+        for workflow, df in processed:
+            with st.expander(f"Preview: {workflow} ({len(df)} rows)", expanded=False):
+                st.dataframe(df.head(50), use_container_width=True)
 
-    st.success(f"Farm: {farm}")
-    st.success(f"Visit Date: {visit_date}")
-
-    # -----------------------------
-    # Cleaning pipeline
-    # -----------------------------
-
-    with st.spinner("Processing files..."):
-        with tempfile.TemporaryDirectory() as tmp:
-            zip_path = os.path.join(tmp, uploaded_zip.name)
-            with open(zip_path, "wb") as f:
-                f.write(uploaded_zip.read())
-
-            with zipfile.ZipFile(zip_path) as z:
-                z.extractall(tmp)
-
-            files = [
-                os.path.join(r, f)
-                for r, _, fs in os.walk(tmp)
-                for f in fs
-                if f.lower().endswith((".csv", ".xlsx", ".xls"))
-            ]
-
-            def priority(f):
-                n = os.path.basename(f).lower()
-                if "udder" in n:
-                    return 0
-                if "teat scoring" in n or "teat scores" in n:
-                    return 1
-                if "teat cleanliness" in n:
-                    return 2
-                if "stall" in n and "evaluation" in n:
-                    return 3
-                if "strip" in n and "yields" in n:
-                    return 4
-                return 99
-
-            files.sort(key=priority)
-
-            ts_summaries = []
-
-            for fp in files:
-                name = os.path.basename(fp).lower()
-
-                if "udder" in name:
-                    udder_hygiene.clean_udder_hygiene(fp, output_workbook, farm, visit_date)
-
-                elif "teat scoring" in name or "teat scores" in name:
-                    df = teat.clean_teat_scoring(fp, output_workbook, farm, visit_date)
-                    if df is not None:
-                        df["Source File"] = os.path.basename(fp)
-                        ts_summaries.append(df)
-
-                elif "teat cleanliness" in name:
-                    tt.clean_teat_hygiene(fp, output_workbook, farm, visit_date)
-
-                elif "stall" in name and "evaluation" in name:
-                    stall_eval.clean_stall_evaluation(fp, output_workbook, farm, visit_date)
-
-                elif "strip" in name and "yields" in name:
-                    stripyields.clean_strip_yields(fp, output_workbook, farm, visit_date)
-
-    st.success("Cleaning complete!")
-
-    with open(output_workbook, "rb") as f:
-        st.download_button(
-            "⬇️ Download Summary Workbook",
-            data=f.read(),
-            file_name=os.path.basename(output_workbook),
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-
+        with open(output_workbook, "rb") as f:
+            st.download_button(
+                "⬇️ Download Cleaned Excel Workbook",
+                data=f.read(),
+                file_name=os.path.basename(output_workbook),
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            )
+else:
+    st.info("Upload a ZIP file to begin. For best results, name it like `Demo_Farm_20250601.zip`.")
