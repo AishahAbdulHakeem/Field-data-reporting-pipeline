@@ -1,20 +1,22 @@
 import re
 from pathlib import Path
+from io import BytesIO
+
 import pandas as pd
-from openpyxl import load_workbook
+
+
+def standardize_column_name(column_name) -> str:
+    """Convert any column name into clean Title Case."""
+    name = str(column_name).strip()
+    name = re.sub(r"[_\-]+", " ", name)
+    name = re.sub(r"\s+", " ", name)
+    return name.title()
 
 
 def standardize_columns(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize column names into readable title-case labels."""
+    """Normalize all column names into readable Title Case labels."""
     df = df.copy()
-    df.columns = [
-        str(col)
-        .strip()
-        .replace("_", " ")
-        .replace("-", " ")
-        .title()
-        for col in df.columns
-    ]
+    df.columns = [standardize_column_name(col) for col in df.columns]
     return df
 
 
@@ -23,71 +25,61 @@ def remove_empty_rows(df: pd.DataFrame) -> pd.DataFrame:
     return df.dropna(how="all").reset_index(drop=True)
 
 
-def add_visit_metadata(df: pd.DataFrame, farm_name: str, visit_date: str) -> pd.DataFrame:
-    """Attach farm and visit metadata to a cleaned dataset."""
-    df = df.copy()
-    if "Farm Name" not in df.columns:
-        df.insert(0, "Farm Name", farm_name)
-    else:
-        df["Farm Name"] = df["Farm Name"].fillna(farm_name)
+def read_uploaded_file(uploaded_file) -> pd.DataFrame:
+    """Read one uploaded CSV or Excel file into a dataframe."""
+    suffix = Path(uploaded_file.name).suffix.lower()
 
-    if "Visit Date" not in df.columns:
-        df.insert(1, "Visit Date", visit_date)
-    else:
-        df["Visit Date"] = df["Visit Date"].fillna(visit_date)
-    return df
-
-
-def read_tabular_file(file_path: str) -> pd.DataFrame:
-    """Read CSV or Excel files into a dataframe."""
-    suffix = Path(file_path).suffix.lower()
     if suffix in [".xlsx", ".xls"]:
-        return pd.read_excel(file_path)
+        return pd.read_excel(uploaded_file)
+
     if suffix == ".csv":
-        for encoding in ["utf-8", "utf-16", "latin1"]:
-            try:
-                return pd.read_csv(file_path, encoding=encoding)
-            except UnicodeDecodeError:
-                continue
-        return pd.read_csv(file_path)
-    raise ValueError(f"Unsupported file type: {suffix}")
+        return pd.read_csv(uploaded_file)
+
+    raise ValueError("Unsupported file type. Please upload a CSV or Excel file.")
 
 
-def clean_basic(file_path: str, farm_name: str, visit_date: str) -> pd.DataFrame:
-    """General cleaning pass used by all demo workflows."""
-    df = read_tabular_file(file_path)
-    df = remove_empty_rows(df)
-    df = standardize_columns(df)
-    df = add_visit_metadata(df, farm_name, visit_date)
-    return df
-
-
-def safe_sheet_name(name: str) -> str:
-    """Excel sheet names have a 31-character limit and cannot include some symbols."""
-    cleaned = re.sub(r"[\\/*?:\[\]]", "", name)
-    return cleaned[:31]
-
-
-def write_sheet(df: pd.DataFrame, workbook_path: str, sheet_name: str) -> None:
-    """Write or replace a sheet in an Excel workbook."""
-    sheet_name = safe_sheet_name(sheet_name)
-
-    try:
-        with pd.ExcelWriter(
-            workbook_path,
-            engine="openpyxl",
-            mode="a",
-            if_sheet_exists="replace",
-        ) as writer:
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-    except FileNotFoundError:
-        with pd.ExcelWriter(workbook_path, engine="openpyxl") as writer:
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-
-
-def add_binary_flag(df: pd.DataFrame, source_col: str, output_col: str, positive_values: list) -> pd.DataFrame:
-    """Create a 1/0 indicator column from a source column."""
+def flag_empty_cells(df: pd.DataFrame) -> pd.DataFrame:
+    """Add row-level missing-cell flags without deleting partially complete records."""
     df = df.copy()
-    if source_col in df.columns:
-        df[output_col] = df[source_col].apply(lambda x: 1 if x in positive_values else 0)
+
+    missing_mask = df.isna() | df.astype(str).apply(lambda col: col.str.strip().eq(""))
+    df["Has Empty Cells"] = missing_mask.any(axis=1)
+    df["Empty Cell Count"] = missing_mask.sum(axis=1)
+    df["Empty Columns"] = missing_mask.apply(
+        lambda row: ", ".join(row.index[row].astype(str)), axis=1
+    )
+
     return df
+
+
+def clean_uploaded_table(uploaded_file) -> tuple[pd.DataFrame, dict]:
+    """Run the simplified public cleaning workflow."""
+    raw_df = read_uploaded_file(uploaded_file)
+    original_rows = len(raw_df)
+    original_columns = len(raw_df.columns)
+
+    cleaned_df = remove_empty_rows(raw_df)
+    removed_empty_rows = original_rows - len(cleaned_df)
+
+    cleaned_df = standardize_columns(cleaned_df)
+    cleaned_df = flag_empty_cells(cleaned_df)
+
+    summary = {
+        "original_rows": original_rows,
+        "cleaned_rows": len(cleaned_df),
+        "removed_empty_rows": removed_empty_rows,
+        "original_columns": original_columns,
+        "final_columns": len(cleaned_df.columns),
+        "rows_with_empty_cells": int(cleaned_df["Has Empty Cells"].sum()) if not cleaned_df.empty else 0,
+        "total_empty_cells": int(cleaned_df["Empty Cell Count"].sum()) if not cleaned_df.empty else 0,
+    }
+
+    return cleaned_df, summary
+
+
+def dataframe_to_excel_bytes(df: pd.DataFrame) -> bytes:
+    """Convert dataframe to downloadable Excel bytes."""
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        df.to_excel(writer, sheet_name="Cleaned Data", index=False)
+    return output.getvalue()
