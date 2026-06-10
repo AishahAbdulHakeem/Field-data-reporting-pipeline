@@ -8,7 +8,7 @@ st.set_page_config(page_title="Field Data Cleaner", page_icon="🧼", layout="wi
 st.title("🧼 Field Data Cleaner")
 st.write(
     "Upload one CSV or Excel file. The app standardizes column names, removes completely empty rows, "
-    "flags empty cells, previews the cleaned data, and exports a cleaned Excel file with a data quality summary."
+    "flags empty cells and duplicate rows, previews the cleaned data, and exports a cleaned Excel file with a data quality summary."
 )
 
 uploaded_file = st.file_uploader("Upload one CSV or Excel file", type=["csv", "xlsx", "xls"])
@@ -19,11 +19,12 @@ if uploaded_file:
 
         st.success("File cleaned successfully.")
 
-        col1, col2, col3, col4 = st.columns(4)
+        col1, col2, col3, col4, col5 = st.columns(5)
         col1.metric("Original Rows", summary["original_rows"])
         col2.metric("Rows After Cleaning", summary["cleaned_rows"])
         col3.metric("Empty Rows Removed", summary["removed_empty_rows"])
         col4.metric("Rows With Empty Cells", summary["rows_with_empty_cells"])
+        col5.metric("Duplicate Rows", summary["duplicate_rows"])
 
         st.subheader("Cleaned Data Preview")
         st.dataframe(cleaned_df.head(100), use_container_width=True)
@@ -34,6 +35,13 @@ if uploaded_file:
                 st.dataframe(empty_rows, use_container_width=True)
         else:
             st.info("No empty cells were found after removing fully empty rows.")
+
+        duplicate_rows = cleaned_df[cleaned_df["Is Duplicate Row"] == True]
+        if not duplicate_rows.empty:
+            with st.expander(f"Duplicate rows flagged ({len(duplicate_rows)})", expanded=False):
+                st.dataframe(duplicate_rows, use_container_width=True)
+        else:
+            st.info("No duplicate rows were found.")
 
         output_bytes = dataframe_to_excel_bytes(cleaned_df, summary=summary)
         output_name = uploaded_file.name.rsplit(".", 1)[0] + "_cleaned.xlsx"
