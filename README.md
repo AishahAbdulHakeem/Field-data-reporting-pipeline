@@ -2,6 +2,10 @@
 
 A Streamlit-based data cleaning app that turns one raw CSV or Excel file into a standardized, downloadable Excel output.
 
+## Live Demo
+
+Try the app here: https://field-data-reporting-pipeline.streamlit.app/
+
 This project is a public, sanitized portfolio version of a larger operational data automation workflow I worked on during my internship. It focuses on a simple, recruiter-friendly user flow:
 
 ```text
@@ -131,5 +135,4 @@ The public version is intentionally smaller than the full internship workflow, b
 - Add type validation for date and numeric columns
 - Add downloadable data quality summary reports
 - Add optional CSV export
-- Deploy the app on Streamlit Cloud
 - Add unit tests for core cleaning functions
