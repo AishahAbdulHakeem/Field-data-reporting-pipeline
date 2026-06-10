@@ -1,9 +1,3 @@
 streamlit
 pandas
 openpyxl
-requests
-fastapi
-uvicorn
-python-multipart
-python-dotenv
-
